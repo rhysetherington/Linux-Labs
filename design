@@ -1,0 +1,48 @@
+Linux Server
+  Virtual Box Manager Install
+    Ubuntu Server
+      Use apt to update server after installation
+        sudo apt update && sudo apt upgrade -y
+      Use apt to install requirements for domain controller configuration
+        sudo apt install samba-ad-dc krb5-user bind9-dnsutils -y
+      Disable conflicting services
+        sudo systemctl disable --now smbd nmbd winbind
+        sudo systemctl mask smbd nmbd winbind
+      Enable Samba AD
+        sudo systemctl unmask samba-ad-dc
+        sudo systemctl enable samba-ad-dc
+      Configure Samba AD
+        sudo samba-tool domain provision \
+          --domain etherai \
+          --realm=etherai.local \
+          --adminpass=<Insert Secure Password> \
+          --server-role=dc \
+          --use-rfc2307 \
+          --dns-backend=SAMBA_INTERNAL
+      #Learning Moment - the tool wants to provision however there is a current file. Run sudo mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
+      Bind DNS inside smb.config
+        sudo nano /etc/samba/smb.conf
+        Adjust DNS from 127.0.0.1 to 45.44.103.26
+        Next, we need to be sure this system will be using the Samba DNS server for its queries, and for that we need to adjust /etc/resolv.conf. That file will be a symlink, so instead of just rewriting its contents, first we have to remove it:
+        sudo unlink /etc/resolv.conf
+      Create file /etc/resolv.conf
+          nameserver 127.0.0.1
+          search etheria.learning
+      Stop and Disable ResolvD and force Samba DNS
+          sudo systemctl disable --now systemd-resolved
+      Copy KB5 Over
+          sudo cp -f /var/lib/samba/private/krb5.conf /etc/krb5.conf
+            [libdefaults]
+              default_realm = ETHERAI.LEARNING
+              dns_lookup_realm = false
+              dns_lookup_kdc = true
+            [realms]
+            ETHERI.LEARNING = {
+              default_domain = etherai.learning
+            }
+            [domain_realm]
+              Ubuntu = ETHERAI.LEARNING
+      Start Samba Services
+          sudo systemctl start samba-ad-dc
+  
+    
