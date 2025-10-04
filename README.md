@@ -1,4 +1,4 @@
-#🐧 Linux Labs — System Administration & Home Lab Services
+🐧 Linux Labs — System Administration & Home Lab Services
 
 🧠 A collection of Linux-based labs showcasing system administration, service deployment, and security operations using Docker and self-hosted tools in a home lab environment.
 
