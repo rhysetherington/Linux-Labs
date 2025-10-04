@@ -1,48 +1,120 @@
-Linux Server
-  Virtual Box Manager Install
-    Ubuntu Server
-      Use apt to update server after installation
-        sudo apt update && sudo apt upgrade -y
-      Use apt to install requirements for domain controller configuration
-        sudo apt install samba-ad-dc krb5-user bind9-dnsutils -y
-      Disable conflicting services
-        sudo systemctl disable --now smbd nmbd winbind
-        sudo systemctl mask smbd nmbd winbind
-      Enable Samba AD
-        sudo systemctl unmask samba-ad-dc
-        sudo systemctl enable samba-ad-dc
-      Configure Samba AD
-        sudo samba-tool domain provision \
-          --domain etherai \
-          --realm=etherai.local \
-          --adminpass=<Insert Secure Password> \
-          --server-role=dc \
-          --use-rfc2307 \
-          --dns-backend=SAMBA_INTERNAL
-      #Learning Moment - the tool wants to provision however there is a current file. Run sudo mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
-      Bind DNS inside smb.config
-        sudo nano /etc/samba/smb.conf
-        Adjust DNS from 127.0.0.1 to 45.44.103.26
-        Next, we need to be sure this system will be using the Samba DNS server for its queries, and for that we need to adjust /etc/resolv.conf. That file will be a symlink, so instead of just rewriting its contents, first we have to remove it:
-        sudo unlink /etc/resolv.conf
-      Create file /etc/resolv.conf
-          nameserver 127.0.0.1
-          search etheria.learning
-      Stop and Disable ResolvD and force Samba DNS
-          sudo systemctl disable --now systemd-resolved
-      Copy KB5 Over
-          sudo cp -f /var/lib/samba/private/krb5.conf /etc/krb5.conf
-            [libdefaults]
-              default_realm = ETHERAI.LEARNING
-              dns_lookup_realm = false
-              dns_lookup_kdc = true
-            [realms]
-            ETHERI.LEARNING = {
-              default_domain = etherai.learning
-            }
-            [domain_realm]
-              Ubuntu = ETHERAI.LEARNING
-      Start Samba Services
-          sudo systemctl start samba-ad-dc
-  
-    
+🐧 Linux Server — Samba Active Directory Domain Controller Lab
+
+🧠 Goal: Configure an Ubuntu Server inside VirtualBox as a Samba Active Directory Domain Controller with DNS and Kerberos integration.
+
+🧰 Prerequisites
+
+Physical server or virtual machine installed. For the purposes of this lab, I am using VirtualBox
+
+Linux Distribution. For the purposes of this lab, I am using an Ubuntu Server ISO (e.g. 22.04 LTS)
+
+Internet connectivity
+
+🏗️ 1. Virtual Machine Setup
+
+Create a new VM in VirtualBox.
+
+Install Ubuntu Server.
+
+Log in to the server and update it:
+
+sudo apt update && sudo apt upgrade -y
+
+📦 2. Install Required Packages
+
+Install Samba, Kerberos, and DNS utilities:
+
+sudo apt install samba-ad-dc krb5-user bind9-dnsutils -y
+
+⚠️ 3. Disable Conflicting Services
+sudo systemctl disable --now smbd nmbd winbind
+sudo systemctl mask smbd nmbd winbind
+
+🧠 4. Enable & Configure Samba AD DC
+Unmask & Enable Samba AD DC
+sudo systemctl unmask samba-ad-dc
+sudo systemctl enable samba-ad-dc
+
+Provision the Domain Controller
+sudo samba-tool domain provision \
+  --domain=ETHERAI \
+  --realm=ETHERAI.LOCAL \
+  --adminpass=<Insert Secure Password> \
+  --server-role=dc \
+  --use-rfc2307 \
+  --dns-backend=SAMBA_INTERNAL
+
+
+💡 Learning Moment:
+If provisioning fails due to an existing config file:
+
+sudo mv /etc/samba/smb.conf /etc/samba/smb.conf.orig
+
+🌐 5. Configure DNS
+Edit smb.conf
+sudo nano /etc/samba/smb.conf
+
+
+Change DNS entry from 127.0.0.1 to your actual IP (e.g., 45.44.103.26).
+
+Update /etc/resolv.conf
+
+Remove the existing symlink:
+
+sudo unlink /etc/resolv.conf
+
+
+Create a new file with the following contents:
+
+nameserver 127.0.0.1
+search etheria.learning
+
+
+Disable systemd-resolved:
+
+sudo systemctl disable --now systemd-resolved
+
+🔑 6. Configure Kerberos
+
+Copy the Kerberos configuration file:
+
+sudo cp -f /var/lib/samba/private/krb5.conf /etc/krb5.conf
+
+
+Sample /etc/krb5.conf:
+
+[libdefaults]
+  default_realm = ETHERAI.LEARNING
+  dns_lookup_realm = false
+  dns_lookup_kdc = true
+
+[realms]
+  ETHERAI.LEARNING = {
+    default_domain = etherai.learning
+  }
+
+[domain_realm]
+  Ubuntu = ETHERAI.LEARNING
+
+🚀 7. Start Samba Services
+sudo systemctl start samba-ad-dc
+
+📋 8. Verification Steps
+
+Check domain status
+
+samba-tool domain level show
+
+
+Verify DNS resolution
+
+host -t A etherai.local
+
+
+Check Kerberos ticket
+
+kinit administrator
+klist
+
+✅ End Result:
+You now have a functional Samba-based Active Directory Domain Controller running on Ubuntu inside VirtualBox, complete with DNS and Kerberos integration.
